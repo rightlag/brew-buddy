@@ -1,0 +1,20 @@
+{
+    "type": "FeatureCollection", 
+    "features": [
+        {
+            "geometry": {
+                "type": "Point", 
+                "coordinates": [
+                    -117.119979, 
+                    33.11565900000001
+                ]
+            }, 
+            "type": "Feature", 
+            "properties": {
+                "marker-size": "medium", 
+                "marker-symbol": "beer", 
+                "title": "Stone Brewing"
+            }
+        }
+    ]
+}
