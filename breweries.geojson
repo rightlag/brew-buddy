@@ -13,7 +13,8 @@
             "properties": {
                 "marker-size": "medium", 
                 "marker-symbol": "beer", 
-                "title": "Stone Brewing"
+                "title": "Stone Brewing",
+                "description": 1
             }
         }
     ]
