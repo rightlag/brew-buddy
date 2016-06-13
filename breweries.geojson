@@ -11,10 +11,10 @@
             }, 
             "type": "Feature", 
             "properties": {
-                "marker-size": "medium", 
+                "title": "Stone Brewing", 
+                "description": 2, 
                 "marker-symbol": "beer", 
-                "title": "Stone Brewing",
-                "description": 1
+                "marker-size": "medium"
             }
         }
     ]
