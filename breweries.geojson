@@ -11,10 +11,10 @@
             }, 
             "type": "Feature", 
             "properties": {
-                "title": "Stone Brewing", 
+                "marker-size": "medium", 
                 "description": 5, 
                 "marker-symbol": "beer", 
-                "marker-size": "medium"
+                "title": "Stone Brewing"
             }
         }, 
         {
@@ -27,10 +27,26 @@
             }, 
             "type": "Feature", 
             "properties": {
+                "title": "Heretic Brewing Company", 
+                "description": 1, 
+                "marker-symbol": "beer", 
+                "marker-size": "medium"
+            }
+        }, 
+        {
+            "geometry": {
+                "type": "Point", 
+                "coordinates": [
+                    -75.1358788, 
+                    39.9623404
+                ]
+            }, 
+            "type": "Feature", 
+            "properties": {
                 "marker-size": "medium", 
                 "description": 1, 
                 "marker-symbol": "beer", 
-                "title": "Heretic Brewing Company"
+                "title": "Yards Brewing Company"
             }
         }
     ]
