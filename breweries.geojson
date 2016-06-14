@@ -1,0 +1,69 @@
+{
+    "type": "FeatureCollection", 
+    "features": [
+        {
+            "geometry": {
+                "type": "Point", 
+                "coordinates": [
+                    -117.119979, 
+                    33.11565900000001
+                ]
+            }, 
+            "type": "Feature", 
+            "properties": {
+                "marker-size": "medium", 
+                "description": 5, 
+                "marker-symbol": "beer", 
+                "title": "Stone Brewing"
+            }
+        }, 
+        {
+            "geometry": {
+                "type": "Point", 
+                "coordinates": [
+                    -122.01544760000002, 
+                    38.2736702
+                ]
+            }, 
+            "type": "Feature", 
+            "properties": {
+                "title": "Heretic Brewing Company", 
+                "description": 1, 
+                "marker-symbol": "beer", 
+                "marker-size": "medium"
+            }
+        }, 
+        {
+            "geometry": {
+                "type": "Point", 
+                "coordinates": [
+                    -75.1358788, 
+                    39.9623404
+                ]
+            }, 
+            "type": "Feature", 
+            "properties": {
+                "marker-size": "medium", 
+                "description": 1, 
+                "marker-symbol": "beer", 
+                "title": "Yards Brewing Company"
+            }
+        }, 
+        {
+            "geometry": {
+                "type": "Point", 
+                "coordinates": [
+                    -75.69383470000002, 
+                    40.004634
+                ]
+            }, 
+            "type": "Feature", 
+            "properties": {
+                "title": "Victory Brewing Co", 
+                "description": 3, 
+                "marker-symbol": "beer", 
+                "marker-size": "medium"
+            }
+        }
+    ]
+}
