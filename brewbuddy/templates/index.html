@@ -5,7 +5,7 @@
 {% endblock %}
 {% block content %}
   {% if not session.access_token %}
-    <p><a href="https://github.com/login/oauth/authorize?scope=repo&client_id={{ client_id }}">Click here</a> to begin!</p>
+    <p><a href="/login">Click here</a> to begin!</p>
   {% endif %}
 {% endblock %}
 {% block javascripts %}

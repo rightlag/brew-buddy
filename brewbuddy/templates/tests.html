@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>brew buddy tests</title>
+  <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.0.0.css">
+  <script src="https://code.jquery.com/qunit/qunit-2.0.0.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDO46uwqC7XH213p5-OT-RRzaD74nb7qAc&libraries=places" async defer></script>
+  <script src="{{ url_for('static', filename='xhr.js') }}"></script>
+  <script type="text/javascript">
+    QUnit.test('appendRow', function(assert) {
+      var place = {
+        properties: {
+          title: 'Heretic Brewing Company',
+          description: 1
+        }
+      };
+      var table = document.getElementById('features');
+      appendRow(place, table);
+      var rows = table.getElementsByTagName('tbody')[0].rows;
+      assert.equal(rows.length, 1);
+      var cells = rows[0].cells;
+      assert.equal(cells[0].innerHTML, 'Heretic Brewing Company');
+      assert.equal(cells[1].innerHTML, 1);
+    });
+  </script>
+</head>
+<body>
+  <div id="qunit"></div>
+  <div id="qunit-fixture">
+    <table id="features" class="mdl-data-table mdl-js-data-table">
+      <thead>
+        <tr>
+          <th class="mdl-data-table__cell--non-numeric">Brewery</th>
+          <th>Visits</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for feature in features %}
+          <tr>
+            <td class="mdl-data-table__cell--non-numeric">{{ feature['properties']['title'] }}</td>
+            <td>{{ feature['properties']['description'] }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td class="mdl-data-table__cell--non-numeric" colspan="2">You have not visited any breweries</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

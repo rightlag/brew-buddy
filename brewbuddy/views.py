@@ -5,6 +5,7 @@ import requests
 
 from base64 import b64decode
 from base64 import b64encode
+from functools import wraps
 from brewbuddy import app
 
 _CLIENT_ID = os.environ['CLIENT_ID']
@@ -14,52 +15,91 @@ _SESSION = requests.Session()
 _SESSION.headers.update({'Accept': 'application/json'})
 
 _BASE_URL = 'https://api.github.com'
-_REPO = 'brew-buddy'
+_REPO_NAME = 'brew-buddy'
+_REPO_URL = 'https://github.com/brew-buddy/brew-buddy'
 _FILENAME = 'breweries.geojson'
+
+
+def login_required(fn):
+    """Decorator to ensure user is authenticated before making requests.
+    """
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        if ('access_token' not in flask.session or
+                flask.session['access_token'] is None):
+            return authenticate()
+        return fn(*args, **kwargs)
+    return wrapped
 
 
 def authenticate():
     return flask.render_template('index.html', client_id=_CLIENT_ID)
 
 
+@app.route('/tests')
+def tests():
+    """All client-side related tests."""
+    return flask.render_template('tests.html')
+
+
+@app.route('/login')
+def login():
+    """HTTP redirect for OAuth authorization."""
+    scopes = ['repo']
+    url = 'https://github.com/login/oauth/authorize?scope=%s&client_id=%s' % (
+        ','.join(scope for scope in scopes),
+        _CLIENT_ID
+    )
+    response = requests.get(url)
+    return flask.redirect(response.url)
+
+
 @app.route('/')
+@login_required
 def hello():
-    if 'access_token' not in flask.session:
+    scopes = []
+    features = []
+    errors = {}
+    repo_url = None
+    url = _BASE_URL + '/user'
+    response = _SESSION.get(url)
+    if response.status_code not in list(range(200, 300)):
+        flask.session['access_token'] = None
         return authenticate()
-    else:
-        access_token = flask.session['access_token']
-        scopes = []
-        features = []
-        url = _BASE_URL + '/user'
-        params = {
-            'access_token': access_token,
-        }
-        response = _SESSION.get(url, params=params)
-        if response.status_code not in list(range(200, 300)):
-            flask.session['access_token'] = None
-            return authenticate()
-        if 'X-OAuth-Scopes' in response.headers:
-            scopes = response.headers['X-OAuth-Scopes'].split(',')
-        auth = response.json()
-        if 'repo' in scopes:
-            url = _BASE_URL + '/repos/%s/%s/contents/%s' % (
-                auth['login'], _REPO, _FILENAME
+    if 'X-OAuth-Scopes' in response.headers:
+        scopes = response.headers['X-OAuth-Scopes'].split(',')
+    user = response.json()
+    if 'repo' in scopes:
+        url = _BASE_URL + '/repos/%s/%s/contents/%s' % (
+            user['login'], _REPO_NAME, _FILENAME
+        )
+        response = _SESSION.get(url)
+        if response.status_code in [403, 404]:
+            message = response.json()['message']
+            errors[response.status_code] = message
+        else:
+            repo_url = 'https://github.com/%s/%s' % (
+                user['login'], _REPO_NAME
             )
-            response = _SESSION.get(url)
-            if response.status_code == 403:
-                message = response.json()['messsage']
-                return flask.render_template('dashboard', message=message)
-            content = b64decode(response.json()['content'])
+            content = (
+                b64decode(response.json()['content']).strip().decode('utf-8')
+            )
             features = json.loads(content)['features']
-        flask.session['auth'] = auth
-        return flask.render_template('dashboard.html', auth=auth,
-                                     features=features)
+    flask.session['user'] = user
+    flask.session['errors'] = errors
+    return flask.render_template('dashboard.html', user=user,
+                                 features=features, repo_url=repo_url)
 
 
-@app.route('/xhr', methods=['POST'])
-def xhr():
-    # By default, assume that this is NOT the initial commit.
-    initial = False
+@app.route('/persist', methods=['POST'])
+@login_required
+def persist():
+    flask.session['errors'] = (
+        {int(k): v for k, v in list(flask.session['errors'].items())}
+    )
+    if 404 in flask.session['errors']:
+        # User still has not forked the repository, throw an error.
+        return flask.jsonify(flask.session['errors'][404]), 404
     json_data = flask.request.json
     # Create the `feature` object. If the geojson file already exists,
     # then concatenate the `feature` object to the list of `features`.
@@ -76,20 +116,14 @@ def xhr():
             'marker-symbol': 'beer',
         }
     }
-    auth = flask.session['auth']
+    user = flask.session['user']
     url = _BASE_URL + '/repos/%s/%s/contents/%s' % (
-        auth['login'], _REPO, _FILENAME
+        user['login'], _REPO_NAME, _FILENAME
     )
     response = _SESSION.get(url)
-    if response.status_code == 404:
-        initial = True
-        content = {
-            'type': 'FeatureCollection',
-            'features': [],
-        }
-    else:
-        repo = response.json()
-        content = json.loads(b64decode(repo['content']))
+    repo = response.json()
+    content = b64decode(repo['content']).strip().decode('utf-8')
+    content = json.loads(content)
     titles = [obj['properties']['title']
               for obj in content['features']]
     if json_data['title'] not in titles:
@@ -98,42 +132,39 @@ def xhr():
     else:
         # This brewery already exists, so update the counter.
         index = titles.index(json_data['title'])
+        content['features'][index]['properties']['description'] += 1
         description = content['features'][index]['properties']['description']
-        description += 1
         # Insert the `description` key with the updated value.
         feature['properties']['description'] = description
     content = json.dumps(content, indent=4)
     data = {
         'path': _FILENAME,
-        'content': b64encode(content).strip(),
+        'message': json_data['title'],
+        'content': b64encode(content.encode('utf-8')).strip().decode('utf-8'),
+        'sha': repo['sha'],
     }
-    data['message'] = (
-        'Initial commit' if initial else json_data['title']
-    )
-    if not initial:
-        data['sha'] = repo['sha']
+    # Ensure newline at EOF.
+    data['content'] += '\n'
     data = json.dumps(data)
-    access_token = flask.session['access_token']
-    headers = {
-        'Authorization': 'Token %s' % access_token,
-    }
-    response = _SESSION.put(url, data=data, headers=headers)
+    response = _SESSION.put(url, data=data)
     if response.status_code not in list(range(200, 300)):
-        return response.reason, response.status_code
+        return flask.jsonify(response.json())
     return flask.jsonify(feature)
 
 
 @app.route('/callback')
 def callback():
     url = 'https://github.com/login/oauth/access_token'
-    session_code = flask.request.args['code']
+    code = flask.request.args['code']
     data = {
         'client_id': _CLIENT_ID,
         'client_secret': _CLIENT_SECRET,
-        'code': str(session_code),
+        'code': code,
     }
     response = _SESSION.post(url, data=data)
-    flask.session['access_token'] = response.json()['access_token']
+    access_token = response.json()['access_token']
+    flask.session['access_token'] = access_token
+    _SESSION.headers.update({'Authorization': 'Token %s' % access_token})
     return flask.redirect('/')
 
 app.secret_key = os.urandom(24)

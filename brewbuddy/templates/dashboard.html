@@ -9,15 +9,6 @@
       <div class="mdl-layout__header-row">
         <span class="mdl-layout-title">Home</span>
         <div class="mdl-layout-spacer"></div>
-        <div class="mdl-textfield mdl-js-textfield mdl-textfield--expandable">
-          <label class="mdl-button mdl-js-button mdl-button--icon" for="search">
-            <i class="material-icons">search</i>
-          </label>
-          <div class="mdl-textfield__expandable-holder">
-            <input class="mdl-textfield__input" type="text" id="search">
-            <label class="mdl-textfield__label" for="search">Enter your query...</label>
-          </div>
-        </div>
         <button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon" id="hdrbtn">
           <i class="material-icons">more_vert</i>
         </button>
@@ -30,21 +21,25 @@
     </header>
     <div class="demo-drawer mdl-layout__drawer mdl-color--blue-grey-900 mdl-color-text--blue-grey-50">
       <header class="demo-drawer-header">
-        <img src="{{ auth['avatar_url'] }}" alt="{{ auth['login'] }}" class="demo-avatar">
+        <img src="{{ user['avatar_url'] }}" alt="{{ user['login'] }}" class="demo-avatar">
         <div class="demo-avatar-dropdown">
-          <span>{{ auth['login'] }}</span>
+          <span>{{ user['login'] }}</span>
           <div class="mdl-layout-spacer"></div>
           <button id="accbtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">
             <i class="material-icons" role="presentation">arrow_drop_down</i>
             <span class="visuallyhidden">Settings</span>
           </button>
           <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" for="accbtn">
-            <li class="mdl-menu__item"><i class="material-icons">add</i>Sign Out</li>
+            <li class="mdl-menu__item"><i class="material-icons">code</i>Your GitHub</li>
+            <li class="mdl-menu__item"><i class="material-icons">power_settings_new</i>Sign Out</li>
           </ul>
         </div>
       </header>
       <nav class="demo-navigation mdl-navigation mdl-color--blue-grey-800">
         <a class="mdl-navigation__link" href="#"><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">home</i>Home</a>
+        {% if repo_url %}
+          <a class="mdl-navigation__link" href="{{ repo_url }}" target="_blank"><i class="mdl-color-text--blue-grey-400 material-icons">cloud</i>Repository</a>
+        {% endif %}
         <div class="mdl-layout-spacer"></div>
         <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">help_outline</i><span class="visuallyhidden">Help</span></a>
       </nav>
@@ -52,12 +47,24 @@
     <main class="mdl-layout__content mdl-color--grey-100">
       <div class="mdl-grid demo-content">
         <div class="mdl-cell mdl-cell--12-col">
-          <form action="#" onsubmit="xhr(event)">
-            <div class="mdl-textfield mdl-js-textfield fluid-width">
-              <input class="mdl-textfield__input" type="text" id="autocomplete" placeholder="Search for breweries...">
-              <label class="mdl-textfield__label" for="autocomplete">brewery</label>
-            </div>
-          </form>
+          {% if session.errors %}
+            <ul class="demo-list-icon mdl-list">
+            {% for status_code, error in session.errors.items() %}
+              <li class="mdl-list__item">
+                <span class="mdl-list__item-primary-content">
+                  <i class="material-icons mdl-list__item-icon">error_outline</i>
+                  {{status_code }} {{ error }}
+                </span>
+              </li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        <div class="mdl-cell mdl-cell--12-col">
+          <div class="mdl-textfield mdl-js-textfield fluid-width">
+            <input class="mdl-textfield__input" type="text" id="autocomplete" placeholder="Search for breweries..." autofocus>
+            <label class="mdl-textfield__label" for="autocomplete">brewery</label>
+          </div>
         </div>
         <div class="mdl-cell mdl-cell--12-col">
           <table id="features" class="mdl-data-table mdl-js-data-table">
@@ -88,5 +95,5 @@
 {% block javascripts %}
   {{ super() }}
   <script src="{{ url_for('static', filename='xhr.js') }}"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDO46uwqC7XH213p5-OT-RRzaD74nb7qAc&libraries=places&callback=initAutocomplete" async defer></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDO46uwqC7XH213p5-OT-RRzaD74nb7qAc&libraries=places" async defer></script>
 {% endblock %}
