@@ -1,0 +1,19 @@
+{
+  "name": "brew-buddy-app",
+  "version": "0.1.0",
+  "homepage": "https://github.com/rightlag/brew-buddy-app",
+  "authors": [
+    "rightlag <rightlag@gmail.com>"
+  ],
+  "description": "",
+  "main": "",
+  "moduleType": [],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

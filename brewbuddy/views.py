@@ -3,8 +3,7 @@ import json
 import os
 import requests
 
-from base64 import b64decode
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from functools import wraps
 from brewbuddy import app
 
@@ -33,7 +32,7 @@ def login_required(fn):
 
 
 def authenticate():
-    return flask.render_template('index.html', client_id=_CLIENT_ID)
+    return flask.render_template('index.html')
 
 
 @app.route('/tests')
@@ -47,11 +46,30 @@ def login():
     """HTTP redirect for OAuth authorization."""
     scopes = ['repo']
     url = 'https://github.com/login/oauth/authorize?scope=%s&client_id=%s' % (
-        ','.join(scope for scope in scopes),
+        ' '.join(scope for scope in scopes),
         _CLIENT_ID
     )
     response = requests.get(url)
     return flask.redirect(response.url)
+
+
+def get_features():
+    """Get a list of features from the repository."""
+    features = []
+    user = flask.session['user']
+    url = _BASE_URL + '/repos/%s/%s/contents/%s' % (
+        user['login'], _REPO_NAME, _FILENAME
+    )
+    response = _SESSION.get(url)
+    if response.status_code in [403, 404]:
+        message = response.json()['message']
+        flask.session['errors'].update({response.status_code: message})
+    else:
+        content = (
+            b64decode(response.json()['content']).strip().decode('utf-8')
+        )
+        features = json.loads(content)['features']
+    return features
 
 
 @app.route('/')
@@ -59,41 +77,27 @@ def login():
 def hello():
     scopes = []
     features = []
-    errors = {}
     repo_url = None
+    flask.session['errors'] = {}
     url = _BASE_URL + '/user'
     response = _SESSION.get(url)
     if response.status_code not in list(range(200, 300)):
         flask.session['access_token'] = None
         return authenticate()
+    user = response.json()
+    flask.session['user'] = user
     if 'X-OAuth-Scopes' in response.headers:
         scopes = response.headers['X-OAuth-Scopes'].split(',')
-    user = response.json()
     if 'repo' in scopes:
-        url = _BASE_URL + '/repos/%s/%s/contents/%s' % (
-            user['login'], _REPO_NAME, _FILENAME
-        )
-        response = _SESSION.get(url)
-        if response.status_code in [403, 404]:
-            message = response.json()['message']
-            errors[response.status_code] = message
-        else:
-            repo_url = 'https://github.com/%s/%s' % (
-                user['login'], _REPO_NAME
-            )
-            content = (
-                b64decode(response.json()['content']).strip().decode('utf-8')
-            )
-            features = json.loads(content)['features']
-    flask.session['user'] = user
-    flask.session['errors'] = errors
+        repo_url = 'https://github.com/%s/%s' % (user['login'], _REPO_NAME)
+        features = get_features()
     return flask.render_template('dashboard.html', user=user,
                                  features=features, repo_url=repo_url)
 
 
 @app.route('/persist', methods=['POST'])
 @login_required
-def persist():
+def persist(dry_run=False):
     flask.session['errors'] = (
         {int(k): v for k, v in list(flask.session['errors'].items())}
     )
@@ -146,9 +150,10 @@ def persist():
     # Ensure newline at EOF.
     data['content'] += '\n'
     data = json.dumps(data)
-    response = _SESSION.put(url, data=data)
-    if response.status_code not in list(range(200, 300)):
-        return flask.jsonify(response.json())
+    if not dry_run:
+      response = _SESSION.put(url, data=data)
+      if response.status_code not in list(range(200, 300)):
+          return flask.jsonify(response.json())
     return flask.jsonify(feature)
 
 

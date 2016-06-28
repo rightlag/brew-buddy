@@ -228,3 +228,14 @@ _:-ms-input-placeholder, :root .demo-graph {
 .fluid-width {
   min-width: 100%;
 }
+#map {
+  width: 100%;
+  height: 300px;
+}
+.mdl-dialog {
+  min-width: 580px;
+}
+#loader {
+  width: 100%;
+  margin-bottom: 24px;
+}

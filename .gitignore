@@ -87,3 +87,7 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Bower Components
+/brewbuddy/static/bower_components/
+
