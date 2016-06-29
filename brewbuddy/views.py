@@ -4,6 +4,7 @@ import os
 import requests
 
 from base64 import b64decode, b64encode
+from collections import namedtuple
 from functools import wraps
 from brewbuddy import app
 
@@ -14,9 +15,18 @@ _SESSION = requests.Session()
 _SESSION.headers.update({'Accept': 'application/json'})
 
 _BASE_URL = 'https://api.github.com'
-_REPO_NAME = 'brew-buddy'
-_REPO_URL = 'https://github.com/brew-buddy/brew-buddy'
-_FILENAME = 'breweries.geojson'
+
+
+def get_default_repo():
+    """Return a `namedtuple` with the default repo information."""
+    Contents = namedtuple('Contents', ['path'])
+    Repo = namedtuple('Repo', ['name', 'url', 'contents'])
+    contents = Contents('breweries.geojson')
+    repo = Repo('brew-buddy', 'https://github.com/brew-buddy/brew-buddy',
+                contents)
+    return repo
+
+_REPO = get_default_repo()
 
 
 def login_required(fn):
@@ -56,19 +66,22 @@ def login():
 def get_features():
     """Get a list of features from the repository."""
     features = []
+    repo_url = None
     user = flask.session['user']
     url = _BASE_URL + '/repos/%s/%s/contents/%s' % (
-        user['login'], _REPO_NAME, _FILENAME
+        user['login'], _REPO.name, _REPO.contents.path
     )
     response = _SESSION.get(url)
     if response.status_code in [403, 404]:
         message = response.json()['message']
         flask.session['errors'].update({response.status_code: message})
     else:
+        repo_url = 'https://github.com/%s/%s' % (user['login'], _REPO.name)
         content = (
             b64decode(response.json()['content']).strip().decode('utf-8')
         )
         features = json.loads(content)['features']
+    flask.session['repo_url'] = repo_url
     return features
 
 
@@ -77,7 +90,6 @@ def get_features():
 def hello():
     scopes = []
     features = []
-    repo_url = None
     flask.session['errors'] = {}
     url = _BASE_URL + '/user'
     response = _SESSION.get(url)
@@ -89,10 +101,9 @@ def hello():
     if 'X-OAuth-Scopes' in response.headers:
         scopes = response.headers['X-OAuth-Scopes'].split(',')
     if 'repo' in scopes:
-        repo_url = 'https://github.com/%s/%s' % (user['login'], _REPO_NAME)
         features = get_features()
     return flask.render_template('dashboard.html', user=user,
-                                 features=features, repo_url=repo_url)
+                                 features=features)
 
 
 @app.route('/persist', methods=['POST'])
@@ -122,7 +133,7 @@ def persist(dry_run=False):
     }
     user = flask.session['user']
     url = _BASE_URL + '/repos/%s/%s/contents/%s' % (
-        user['login'], _REPO_NAME, _FILENAME
+        user['login'], _REPO.name, _REPO.contents.path
     )
     response = _SESSION.get(url)
     repo = response.json()
@@ -142,7 +153,7 @@ def persist(dry_run=False):
         feature['properties']['description'] = description
     content = json.dumps(content, indent=4)
     data = {
-        'path': _FILENAME,
+        'path': _REPO.contents.path,
         'message': json_data['title'],
         'content': b64encode(content.encode('utf-8')).strip().decode('utf-8'),
         'sha': repo['sha'],
@@ -151,9 +162,9 @@ def persist(dry_run=False):
     data['content'] += '\n'
     data = json.dumps(data)
     if not dry_run:
-      response = _SESSION.put(url, data=data)
-      if response.status_code not in list(range(200, 300)):
-          return flask.jsonify(response.json())
+        response = _SESSION.put(url, data=data)
+        if response.status_code not in list(range(200, 300)):
+            return flask.jsonify(response.json())
     return flask.jsonify(feature)
 
 

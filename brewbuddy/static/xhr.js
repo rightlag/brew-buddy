@@ -76,6 +76,7 @@
   }
 
   function initTable() {
+    if (initial) return;
     var tbody = table.getElementsByTagName('tbody')[0];
     var rows = tbody.getElementsByTagName('tr');
     for (var i = 0; i < rows.length; i++) {

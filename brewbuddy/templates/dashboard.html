@@ -38,8 +38,8 @@
       </header>
       <nav class="demo-navigation mdl-navigation mdl-color--blue-grey-800">
         <a class="mdl-navigation__link" href="#"><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">home</i>Home</a>
-        {% if repo_url %}
-          <a class="mdl-navigation__link" href="{{ repo_url }}" target="_blank"><i class="mdl-color-text--blue-grey-400 material-icons">cloud</i>Repository</a>
+        {% if session.repo_url %}
+          <a class="mdl-navigation__link" href="{{ session.repo_url }}" target="_blank"><i class="mdl-color-text--blue-grey-400 material-icons">cloud</i>Repository</a>
         {% endif %}
         <div class="mdl-layout-spacer"></div>
         <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons" role="presentation">help_outline</i><span class="visuallyhidden">Help</span></a>
@@ -73,6 +73,8 @@
               <tr>
                 <th class="mdl-data-table__cell--non-numeric">Brewery</th>
                 <th>Visits</th>
+                <th style="display: none;">Longitude</th>
+                <th style="display: none;">Latitude</th>
               </tr>
             </thead>
             <tbody>
