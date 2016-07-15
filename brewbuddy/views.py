@@ -75,6 +75,7 @@ def get_features():
     if response.status_code in [403, 404]:
         message = response.json()['message']
         flask.session['errors'].update({response.status_code: message})
+        flask.session.updated = True
     else:
         repo_url = 'https://github.com/%s/%s' % (user['login'], _REPO.name)
         content = (
@@ -106,13 +107,28 @@ def hello():
                                  features=features)
 
 
+@app.route('/fork', methods=['POST'])
+@login_required
+def fork():
+    """Function for forking the repository if the user has not already
+    done so."""
+    url = _BASE_URL + '/repos/%s/%s/forks' % (_REPO.name, _REPO.name)
+    response = _SESSION.post(url)
+    if response.status_code not in list(range(200, 300)):
+        message = response.json()['message']
+        flask.session['errors'].update({response.status_code: message})
+        flask.session.modified = True
+        return '', response.status_code
+    flask.session['errors'].pop(str(404))
+    # http://flask.pocoo.org/docs/0.11/api/#flask.session.modified
+    flask.session.modified = True
+    return flask.jsonify(response.json()), response.status_code
+
+
 @app.route('/persist', methods=['POST'])
 @login_required
 def persist(dry_run=False):
-    flask.session['errors'] = (
-        {int(k): v for k, v in list(flask.session['errors'].items())}
-    )
-    if 404 in flask.session['errors']:
+    if str(404) in flask.session['errors']:
         # User still has not forked the repository, throw an error.
         return flask.jsonify(flask.session['errors'][404]), 404
     json_data = flask.request.json
@@ -136,6 +152,12 @@ def persist(dry_run=False):
         user['login'], _REPO.name, _REPO.contents.path
     )
     response = _SESSION.get(url)
+    if response.status_code not in list(range(200, 300)):
+        flask.session['errors'].update({
+            response.status_code: response.reason,
+        })
+        flask.session.updated = True
+        return '', response.status_code
     repo = response.json()
     content = b64decode(repo['content']).strip().decode('utf-8')
     content = json.loads(content)

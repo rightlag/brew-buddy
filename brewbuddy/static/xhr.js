@@ -3,11 +3,14 @@
 
   var autocomplete;
   var dialog;
-  var initial = true;
   var input = document.getElementById('autocomplete');
   var table = document.getElementById('features');
   var loader = document.getElementById('loader');
+  var initial = isInitial();
   loader.style.display = 'none';
+  var repoAnchor = document.getElementById('fork');
+  if (typeof repoAnchor !== 'undefined' && repoAnchor !== null)
+    repoAnchor.addEventListener('click', forkRepo);
 
   window.onload = function() {
     window.addEventListener('focus', function() {
@@ -17,6 +20,16 @@
     initTable();
     initDialog();
   };
+
+  function isInitial() {
+    // Function to determine if it is the initial row being added to the table.
+    var tbody = table.getElementsByTagName('tbody')[0];
+    var row = tbody.rows[0];
+    if (row.cells[0].attributes.hasOwnProperty('colspan')) {
+      if (parseInt(row.cells[0].attributes.colspan.value) === 4) return true;
+    }
+    return false;
+  }
 
   function initAutocomplete() {
     var options = {
@@ -192,6 +205,52 @@
       }
     };
     return markers;
+  }
+
+  function forkRepo(event) {
+    event.preventDefault();
+    var settings = {
+      contentType: 'application/json',
+      method: 'POST'
+    };
+    var jqXHR = $.ajax('/fork', settings);
+    function done(data) {
+      // Add the repository link to the sidebar menu.
+      var nav = document.getElementsByClassName('demo-navigation')[0];
+      var anchor = document.createElement('a');
+      anchor.href = data.html_url;
+      anchor.className = 'mdl-navigation__link';
+      anchor.target = '_blank';
+      var icon = document.createElement('i');
+      icon.className = 'mdl-color-text--blue-grey-400';
+      icon.classList.add('material-icons');
+      icon.innerHTML = 'cloud';
+      anchor.appendChild(icon);
+      anchor.innerHTML += 'Repository';
+      nav.insertBefore(anchor, nav.children[1]);
+      var errors = document.getElementById('errors');
+      if (typeof errors !== 'undefined' && errors !== null) {
+        for (var i = 0; i < errors.children.length; i++) {
+          var li = errors.children[i];
+          var statusCode = li.getElementsByClassName('status-code')[0]
+            .innerHTML;
+          if (typeof statusCode !== 'undefined' && statusCode !== null) {
+            statusCode = parseInt(statusCode);
+            if (statusCode === 404) {
+              // Repository not found error.
+              var div = errors.parentElement;
+              div.style.display = 'none';
+              li.remove();
+            }
+          }
+        }
+      }
+    }
+
+    function fail(jqXHR) {
+      console.log(jqXHR);
+    }
+    return jqXHR.then(done, fail);
   }
 
   function appendRow(place, table) {

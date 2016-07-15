@@ -15,5 +15,8 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "dependencies": {
+    "dialog-polyfill": "~0.4.3"
+  }
 }
